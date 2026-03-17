@@ -1,64 +1,65 @@
 #include <stdint.h>
 
-#define RP1_UART0_BASE  0x1F00030000UL
+#define GIO_AON_BASE   0x7D517C00UL
 
-#define UART_DR    ((volatile uint32_t *)(RP1_UART0_BASE + 0x00))
-#define UART_FR    ((volatile uint32_t *)(RP1_UART0_BASE + 0x18))
-#define UART_IBRD  ((volatile uint32_t *)(RP1_UART0_BASE + 0x24))
-#define UART_FBRD  ((volatile uint32_t *)(RP1_UART0_BASE + 0x28))
-#define UART_LCRH  ((volatile uint32_t *)(RP1_UART0_BASE + 0x2C))
-#define UART_CR    ((volatile uint32_t *)(RP1_UART0_BASE + 0x30))
-#define UART_IMSC  ((volatile uint32_t *)(RP1_UART0_BASE + 0x38))
-#define UART_ICR   ((volatile uint32_t *)(RP1_UART0_BASE + 0x44))
+#define GIO0_ODEN   ((volatile uint32_t *)(GIO_AON_BASE + 0x00))
+#define GIO0_DATA   ((volatile uint32_t *)(GIO_AON_BASE + 0x04))
+#define GIO0_IODIR  ((volatile uint32_t *)(GIO_AON_BASE + 0x08))
 
-static void uart_init(void) {
-    *UART_CR = 0x00000000;
-    *UART_ICR = 0x7FF;
+#define ACT_LED_BIT 9
+#define ACT_LED_MASK (1u << ACT_LED_BIT)
 
-    *UART_IBRD = 26;
-    *UART_FBRD = 3;
-
-    *UART_LCRH = (1 << 4) | (3 << 5);
-    *UART_IMSC = 0x00000000;
-    *UART_CR = (1 << 0) | (1 << 8) | (1 << 9);
-}
-
-static void uart_putc(char c) {
-    while (*UART_FR & (1 << 5)) {
-    }
-    *UART_DR = (uint32_t)c;
-}
-
-static void uart_puts(const char *s) {
-    while (*s) {
-        if (*s == '\n') {
-            uart_putc('\r');
-        }
-        uart_putc(*s++);
+static void delay(volatile uint32_t count) {
+    while (count--) {
+        __asm__ volatile("nop");
     }
 }
 
-static void uart_hex(uint64_t x) {
-    for (int i = 60; i >= 0; i -= 4) {
-        uint8_t nibble = (x >> i) & 0xF;
-        if (nibble < 10) {
-            uart_putc('0' + nibble);
-        } else {
-            uart_putc('A' + (nibble - 10));
-        }
-    }
+static void act_led_init(void) {
+    /*
+     * Make sure it is NOT open-drain.
+     * Clear bit 9 in ODEN.
+     */
+    *GIO0_ODEN &= ~ACT_LED_MASK;
+
+    /*
+     * Set GPIO 9 as output.
+     * For this controller: 0 = output, 1 = input
+     * So we CLEAR the direction bit.
+     */
+    *GIO0_IODIR &= ~ACT_LED_MASK;
+
+    /*
+     * Start with LED off.
+     * LED is active-low, so writing 1 turns it off.
+     */
+    *GIO0_DATA |= ACT_LED_MASK;
+}
+
+static void act_led_on(void) {
+    /*
+     * Active-low:
+     * write 0 to turn LED on
+     */
+    *GIO0_DATA &= ~ACT_LED_MASK;
+}
+
+static void act_led_off(void) {
+    /*
+     * Active-low:
+     * write 1 to turn LED off
+     */
+    *GIO0_DATA |= ACT_LED_MASK;
 }
 
 void kernel_main(void) {
-    uart_init();
-
-    uart_puts("Hello from bare-metal Raspberry Pi 5!\n");
-    uart_puts("RP1 UART0 is alive.\n");
-    uart_puts("UART base = 0x");
-    uart_hex(RP1_UART0_BASE);
-    uart_puts("\n");
+    act_led_init();
 
     while (1) {
-        __asm__ volatile("wfe");
+        act_led_on();
+        delay(3000000);
+
+        act_led_off();
+        delay(3000000);
     }
 }
