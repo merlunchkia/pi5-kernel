@@ -1,0 +1,18 @@
+#ifndef MMAP_H
+#define MMAP_H
+
+#define KERNEL_BASE      0x200000UL
+
+#define DEBUG_UART_BASE  0x107D001000UL
+
+#define RP1_BAR0         0x1F00000000UL
+#define RP1_UART0_OFF    0x00030000UL
+#define RP1_UART0_BASE   (RP1_BAR0 + RP1_UART0_OFF)
+
+#define GIC_BASE         0x107FFF8000UL
+#define GICD_BASE        (GIC_BASE + 0x1000)
+#define GICC_BASE        (GIC_BASE + 0x2000)
+
+#define COUNTER_FREQ     54000000UL
+
+#endif

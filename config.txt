@@ -1,0 +1,9 @@
+# Pi 5 kernel configuration
+arm_64bit=1
+kernel=kernel8.img
+# Enable SoC debug UART (3-pin header between HDMI)
+enable_uart=1
+# Preserve firmware's PCIe setup for RP1
+pciex4_reset=0
+# Skip DTB loading (simplifies early boot)
+os_check=0

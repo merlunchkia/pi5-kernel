@@ -1,10 +1,13 @@
-CROSS   = aarch64-linux-gnu
+CROSS   = aarch64-none-elf
 CC      = $(CROSS)-gcc
 LD      = $(CROSS)-ld
 OBJCOPY = $(CROSS)-objcopy
+RM      = del /f /q
 
-CFLAGS  = -Wall -Wextra -O2 -ffreestanding -nostdlib -nostartfiles
+CFLAGS  = -Wall -Wextra -O2 -ffreestanding -nostdlib -nostartfiles -Iinclude
 LDFLAGS = -T linker.ld
+
+OBJS = boot.o kernel.o uart.o
 
 all: kernel8.img
 
@@ -14,11 +17,14 @@ boot.o: boot.S
 kernel.o: kernel.c
 	$(CC) $(CFLAGS) -c kernel.c -o kernel.o
 
-kernel.elf: boot.o kernel.o linker.ld
-	$(LD) $(LDFLAGS) boot.o kernel.o -o kernel.elf
+uart.o: uart.c
+	$(CC) $(CFLAGS) -c uart.c -o uart.o
+
+kernel.elf: $(OBJS) linker.ld
+	$(LD) $(LDFLAGS) $(OBJS) -o kernel.elf
 
 kernel8.img: kernel.elf
 	$(OBJCOPY) kernel.elf -O binary kernel8.img
 
 clean:
-	rm -f *.o *.elf *.img
+	$(RM) *.o *.elf *.img
